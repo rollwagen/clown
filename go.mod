@@ -3,6 +3,8 @@ module github.com/rollwagen/clown
 go 1.19
 
 require (
+	github.com/briandowns/spinner v1.19.0
+	github.com/fatih/color v1.7.0
 	github.com/go-git/go-git/v5 v5.4.2
 	github.com/joho/godotenv v1.4.0
 	github.com/ktr0731/go-fuzzyfinder v0.6.0
@@ -29,6 +31,8 @@ require (
 	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/kevinburke/ssh_config v1.2.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.0.3 // indirect
+	github.com/mattn/go-colorable v0.1.2 // indirect
+	github.com/mattn/go-isatty v0.0.8 // indirect
 	github.com/mattn/go-runewidth v0.0.13 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/nsf/termbox-go v0.0.0-20201124104050-ed494de23a00 // indirect

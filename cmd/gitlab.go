@@ -1,25 +1,25 @@
-/*
-Copyright © 2022 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
 	"fmt"
+	"os"
+	"sort"
+	"strings"
+	"time"
+
+	"github.com/briandowns/spinner"
+	"github.com/fatih/color"
 	"github.com/go-git/go-git/v5"
 	"github.com/joho/godotenv"
 	"github.com/ktr0731/go-fuzzyfinder"
 	"github.com/spf13/cobra"
 	"github.com/xanzy/go-gitlab"
-	"os"
-	"sort"
-	"strings"
 )
 
 // gitlabCmd represents the gitlab command
 var gitlabCmd = &cobra.Command{
 	Use:   "gitlab",
-	Short: "A brief description of your command",
-	Long:  `A longer description that spans multiple lines and likely contains ...`,
+	Short: "Clone all projects (repos) in a group",
 	Run: func(cmd *cobra.Command, args []string) {
 		cloneGitlabGroup()
 	},
@@ -31,7 +31,6 @@ type GitlabGroup struct {
 }
 
 func cloneGitlabGroup() {
-
 	home, _ := os.UserHomeDir()
 	_ = godotenv.Load(home + "/.clown")
 	gitlabToken := os.Getenv("GITLAB_TOKEN")
@@ -69,42 +68,39 @@ GITLAB_URL=https://gitlab.company.com, or configure in ~/.clown`)
 		return strings.ToLower(groups[i].Name) > strings.ToLower(groups[j].Name)
 	})
 
-	idx, err := fuzzyfinder.Find(groups, func(i int) string {
+	idx, _ := fuzzyfinder.Find(groups, func(i int) string {
 		return groups[i].Name
 	})
 	groupToClone := groups[idx]
 
-	err = os.Mkdir(groupToClone.Name, 0750)
+	err = os.Mkdir(groupToClone.Name, 0o750)
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "Error creating group directory '%s': %s", groupToClone.Name, err)
 		os.Exit(1)
 	}
+
+	s := spinner.New(spinner.CharSets[43], 60*time.Millisecond)
+	_ = s.Color("cyan")
+	cyan := color.New(color.FgCyan).SprintFunc()
+	s.Start()
+
 	projects, _, _ := gitlabClient.Groups.ListGroupProjects(groupToClone.ID, &gitlab.ListGroupProjectsOptions{})
+
+	s.FinalMSG = fmt.Sprintf("Finished cloning %d projects to folder %s.\n", len(projects), groupToClone.Name)
+
 	for _, p := range projects {
-		repoURL := "git@" + gitlabHost + ":" + groupToClone.Name + "/" + p.Name + ".git"
-		fmt.Println(repoURL)
-		//_, err = git.PlainClone(groupToClone.Name, false, &git.CloneOptions{
+		s.Suffix = fmt.Sprintf(" Cloning project %s to folder %s/ ...", cyan(p.Name), groupToClone.Name)
 		path := groupToClone.Name + string(os.PathSeparator) + p.Name
 		_, err = git.PlainClone(path, false, &git.CloneOptions{
-			URL:      repoURL,
-			Progress: os.Stdout,
+			URL: p.SSHURLToRepo,
 		})
 		if err != nil {
 			_, _ = fmt.Fprintf(os.Stderr, "Error cloning project %s: %s", p.Name, err)
 		}
 	}
+	s.Stop()
 }
 
 func init() {
 	rootCmd.AddCommand(gitlabCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// gitlabCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// gitlabCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
