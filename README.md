@@ -1,5 +1,8 @@
 # clown
+
 A Git(lab) group cloner
+
+![gopher](https://user-images.githubusercontent.com/7364201/192334813-aabf43e9-a3a6-4e4f-adca-03c105f7a37e.png)
 
 ## Configuration & Running
 
