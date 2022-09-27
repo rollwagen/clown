@@ -16,6 +16,8 @@ import (
 	"github.com/xanzy/go-gitlab"
 )
 
+var owned bool
+
 // gitlabCmd represents the gitlab command
 var gitlabCmd = &cobra.Command{
 	Use:   "gitlab",
@@ -51,10 +53,11 @@ GITLAB_URL=https://gitlab.company.com, or configure in ~/.clown`)
 
 	var groups []GitlabGroup
 
-	listAll := bool(true)
+	boolTrue := bool(true)
 	availableGroups, _, _ := gitlabClient.Groups.ListGroups(
 		&gitlab.ListGroupsOptions{
-			AllAvailable: &listAll,
+			AllAvailable: &boolTrue,
+			Owned:        &owned,
 			ListOptions: gitlab.ListOptions{
 				PerPage: 100,
 			},
@@ -68,9 +71,12 @@ GITLAB_URL=https://gitlab.company.com, or configure in ~/.clown`)
 		return strings.ToLower(groups[i].Name) > strings.ToLower(groups[j].Name)
 	})
 
-	idx, _ := fuzzyfinder.Find(groups, func(i int) string {
+	idx, err := fuzzyfinder.Find(groups, func(i int) string {
 		return groups[i].Name
 	})
+	if err != nil {
+		os.Exit(1)
+	}
 	groupToClone := groups[idx]
 
 	err = os.Mkdir(groupToClone.Name, 0o750)
@@ -86,8 +92,6 @@ GITLAB_URL=https://gitlab.company.com, or configure in ~/.clown`)
 
 	projects, _, _ := gitlabClient.Groups.ListGroupProjects(groupToClone.ID, &gitlab.ListGroupProjectsOptions{})
 
-	s.FinalMSG = fmt.Sprintf("Finished cloning %d projects to folder %s.\n", len(projects), groupToClone.Name)
-
 	for _, p := range projects {
 		s.Suffix = fmt.Sprintf(" Cloning project %s to folder %s/ ...", cyan(p.Name), groupToClone.Name)
 		path := groupToClone.Name + string(os.PathSeparator) + p.Name
@@ -95,12 +99,15 @@ GITLAB_URL=https://gitlab.company.com, or configure in ~/.clown`)
 			URL: p.SSHURLToRepo,
 		})
 		if err != nil {
-			_, _ = fmt.Fprintf(os.Stderr, "Error cloning project %s: %s", p.Name, err)
+			s.Stop()
+			_, _ = fmt.Fprintf(os.Stderr, "Error cloning project %s:\n%s\nAborting.\n", cyan(p.Name), err)
 		}
 	}
+	s.FinalMSG = fmt.Sprintf("Finished cloning %d projects to folder %s.\n", len(projects), groupToClone.Name)
 	s.Stop()
 }
 
 func init() {
 	rootCmd.AddCommand(gitlabCmd)
+	gitlabCmd.Flags().BoolVarP(&owned, "owned", "o", false, "Limit to groups explicitly owned by the current user")
 }
