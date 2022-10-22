@@ -4,9 +4,10 @@ import (
 	"os"
 
 	"github.com/rollwagen/clown/cmd/gitlab"
-
 	"github.com/spf13/cobra"
 )
+
+var Verbose bool
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -25,7 +26,7 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	rootCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "Enable debug output")
 
 	addAllCommands()
 }

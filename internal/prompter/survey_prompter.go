@@ -2,19 +2,16 @@ package prompter
 
 import (
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/rollwagen/clown/pkg/prompter"
 )
 
-type Prompter interface {
-	FuzzySelect(msg string, defaultValue string, options []string) (result int, err error)
-}
-
-func New() Prompter {
+func New() prompter.Prompter {
 	return &surveyPrompter{}
 }
 
 type surveyPrompter struct{}
 
-func (p *surveyPrompter) FuzzySelect(message, defaultValue string, options []string) (result int, err error) {
+func (p *surveyPrompter) Select(message, defaultValue string, options []string) (result int, err error) {
 	q := &survey.Select{
 		Message:  message,
 		Options:  options,

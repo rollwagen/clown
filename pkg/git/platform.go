@@ -1,4 +1,4 @@
-package platform
+package git
 
 import (
 	"fmt"
@@ -22,14 +22,14 @@ func (t Type) String() string {
 	return []string{"Gitlab", "Github", "Bitbucket"}[t]
 }
 
-// GitPlatform defines all common methods for a Git platform such as GitHub or Bitbucket.
-type GitPlatform interface {
+// Platform defines all common methods for a Git platform such as GitHub or Bitbucket.
+type Platform interface {
 	IsAuthenticated() bool
 	CloneReposForGroup(groupName string, repoProgress chan<- string) error
 	ListGroups() []string
 }
 
-func New(t Type, hostname, authToken string) GitPlatform {
+func New(t Type, hostname, authToken string) Platform {
 	if t == Gitlab {
 		p := newGitlabPlatform(hostname, authToken)
 
@@ -39,24 +39,24 @@ func New(t Type, hostname, authToken string) GitPlatform {
 	return nil
 }
 
-type gitPlatform struct {
+type platform struct {
 	hostName  string
 	authToken string
 }
 
 // Gitlab Platform implementation.
-type gitlabPlatform struct {
-	gitPlatform
+type gitlab struct {
+	platform
 	client *gogitlab.Client
 }
 
-func (g *gitlabPlatform) IsAuthenticated() bool {
+func (g *gitlab) IsAuthenticated() bool {
 	t, _, _ := g.client.PersonalAccessTokens.ListPersonalAccessTokens(&gogitlab.ListPersonalAccessTokensOptions{})
 
 	return len(t) > 0
 }
 
-func (g *gitlabPlatform) CloneReposForGroup(groupName string, repoProgress chan<- string) error {
+func (g *gitlab) CloneReposForGroup(groupName string, repoProgress chan<- string) error {
 	err := os.Mkdir(groupName, 0o750)
 	if err != nil {
 		_, _ = fmt.Fprintf(os.Stderr, "Error creating group directory '%s': %s", groupName, err)
@@ -89,14 +89,17 @@ func (g *gitlabPlatform) CloneReposForGroup(groupName string, repoProgress chan<
 	return nil
 }
 
-func (g *gitlabPlatform) ListGroups() []string {
-	groups := []string{}
+func (g *gitlab) ListGroups() []string {
+	groups := make([]string, 0, 100)
 
-	boolTrue := bool(true)
+	truePointer := func() *bool {
+		boolTrue := true
+		return &boolTrue
+	}
 
 	availableGroups, _, _ := g.client.Groups.ListGroups(
 		&gogitlab.ListGroupsOptions{
-			AllAvailable: &boolTrue,
+			AllAvailable: truePointer(),
 			ListOptions: gogitlab.ListOptions{
 				PerPage: 100,
 			},
@@ -113,10 +116,10 @@ func (g *gitlabPlatform) ListGroups() []string {
 	return groups
 }
 
-func newGitlabPlatform(hostName, authToken string) gitlabPlatform {
+func newGitlabPlatform(hostName, authToken string) gitlab {
 	if authToken == "" || hostName == "" {
 		_, _ = fmt.Fprintln(os.Stderr, "Please define token with env variable GITLAB_TOKEN=glpat-... "+
-			"and gitlabPlatform url with GITLAB_URL=https://gitlabPlatform.company.com, or configure in ~/.clown")
+			"and gitlab url with GITLAB_URL=https://gitlab.company.com, or configure in ~/.clown")
 
 		os.Exit(1)
 	}
@@ -125,12 +128,12 @@ func newGitlabPlatform(hostName, authToken string) gitlabPlatform {
 
 	client, err := gogitlab.NewClient(authToken, gogitlab.WithBaseURL(baseURL))
 	if err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "Error creating gitlabPlatform client: %s\n", err)
+		_, _ = fmt.Fprintf(os.Stderr, "Error creating gitlab client: %s\n", err)
 		os.Exit(1)
 	}
 
-	return gitlabPlatform{
-		gitPlatform: gitPlatform{
+	return gitlab{
+		platform: platform{
 			hostName:  hostName,
 			authToken: authToken,
 		},
