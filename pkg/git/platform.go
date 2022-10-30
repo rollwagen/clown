@@ -119,7 +119,7 @@ func (g *gitlab) ListGroups() []string {
 func newGitlabPlatform(hostName, authToken string) gitlab {
 	if authToken == "" || hostName == "" {
 		_, _ = fmt.Fprintln(os.Stderr, "Please define token with env variable GITLAB_TOKEN=glpat-... "+
-			"and gitlab url with GITLAB_URL=https://gitlab.company.com, or configure in ~/.clown")
+			"and gitlab url with GITLAB_URL=gitlab.company.com, or configure in ~/.clown")
 
 		os.Exit(1)
 	}
