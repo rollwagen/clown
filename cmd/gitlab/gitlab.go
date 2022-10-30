@@ -25,7 +25,7 @@ func NewCmd() *cobra.Command {
 // GitlabCmd represents the gitlab command
 var gitlabCmd = &cobra.Command{
 	Use:   "gitlab",
-	Short: "CloneReposForGroup all projects (repos) in a group",
+	Short: "Clone all projects (repos) in a group",
 	Run: func(cmd *cobra.Command, args []string) {
 		verbose, _ := cmd.Flags().GetBool("verbose")
 		if verbose {
