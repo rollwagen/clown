@@ -31,6 +31,12 @@ brews:
 checksum:
   name_template: 'checksums.txt'
 
+archives:
+  - files:
+      - README.md
+      - LICENSE
+      - completions/*
+
 snapshot:
   name_template: "{{ incpatch .Version }}-next"
 
