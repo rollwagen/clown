@@ -23,7 +23,7 @@ brews:
       name: homebrew-tap
     license: Apache-2.0
     install: |-
-      bin.install "s3-cisbench"
+      bin.install "clown"
       bash_completion.install "completions/clown.bash" => "clown"
       zsh_completion.install "completions/clown.zsh" => "_clown"
       fish_completion.install "completions/clown.fish"
