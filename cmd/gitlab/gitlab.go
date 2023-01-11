@@ -5,6 +5,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/rs/zerolog"
 
 	"github.com/rollwagen/clown/pkg/config"
@@ -37,6 +39,7 @@ var gitlabCmd = &cobra.Command{
 		// user interaction i.e. let user select the group to clone
 		gitlabPlatform := git.New(git.Gitlab, c.Host, c.AuthToken)
 		groups := gitlabPlatform.ListGroups()
+		log.Debug().Msgf("Group list length len(groups)=%d", len(groups))
 		p := prompter.New()
 		idx, err := p.Select("Select group to clone", "", groups)
 		if err != nil {
@@ -46,6 +49,7 @@ var gitlabCmd = &cobra.Command{
 			}
 			os.Exit(1)
 		}
+		log.Debug().Msgf("Selected group idx=%d groups[idx]=%s", idx, groups[idx])
 
 		// actual cloning of all repos in a group
 		progress := spinner.New(spinner.CharSets[43], 70*time.Millisecond)

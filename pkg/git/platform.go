@@ -6,6 +6,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/go-git/go-git/v5"
 	gogitlab "github.com/xanzy/go-gitlab"
 )
@@ -63,12 +65,27 @@ func (g *gitlab) CloneReposForGroup(groupName string, repoProgress chan<- string
 		os.Exit(1)
 	}
 
-	groups, _, _ := g.client.Groups.ListGroups(&gogitlab.ListGroupsOptions{Search: &groupName})
-	if len(groups) > 1 {
-		_, _ = fmt.Fprintf(os.Stderr, "Expected one search result for %s, but got %d", groupName, len(groups))
+	log.Debug().Msgf("ListGroups with groupNmae='%s'", groupName)
+	groups, response, _ := g.client.Groups.ListGroups(
+		&gogitlab.ListGroupsOptions{
+			AllAvailable: truePointer(),
+			Search:       &groupName,
+		})
+
+	if response.TotalItems == 0 {
+		msg := fmt.Sprintf("Expected a search result for '%s', but got none\n", groupName)
+		log.Error().Msg(msg)
+		_, _ = fmt.Fprint(os.Stderr, msg)
+		os.Exit(1)
 	}
 
-	groupID := groups[0].ID
+	if len(groups) > 1 {
+		for i, g := range groups {
+			log.Debug().Msgf("Found group[%d]=%s", i, g.Name)
+		}
+	}
+
+	groupID := groups[0].ID // todo: validate if name matches for idx=0
 
 	projects, _, _ := g.client.Groups.ListGroupProjects(groupID, &gogitlab.ListGroupProjectsOptions{})
 
@@ -92,12 +109,7 @@ func (g *gitlab) CloneReposForGroup(groupName string, repoProgress chan<- string
 func (g *gitlab) ListGroups() []string {
 	groups := make([]string, 0, 100)
 
-	truePointer := func() *bool {
-		boolTrue := true
-		return &boolTrue
-	}
-
-	availableGroups, _, _ := g.client.Groups.ListGroups(
+	availableGroups, response, _ := g.client.Groups.ListGroups(
 		&gogitlab.ListGroupsOptions{
 			AllAvailable: truePointer(),
 			ListOptions: gogitlab.ListOptions{
@@ -105,6 +117,7 @@ func (g *gitlab) ListGroups() []string {
 			},
 		},
 	)
+	log.Debug().Msgf("Response items=%d pages=%d", response.TotalItems, response.TotalPages)
 	for _, group := range availableGroups {
 		groups = append(groups, group.Name)
 	}
@@ -112,6 +125,8 @@ func (g *gitlab) ListGroups() []string {
 	sort.Slice(groups, func(i, j int) bool {
 		return strings.ToLower(groups[i]) < strings.ToLower(groups[j])
 	})
+
+	log.Debug().Msgf("Processed %d groups from gitlab", len(groups))
 
 	return groups
 }
@@ -139,4 +154,9 @@ func newGitlabPlatform(hostName, authToken string) gitlab {
 		},
 		client: client,
 	}
+}
+
+func truePointer() *bool {
+	boolTrue := true
+	return &boolTrue
 }
